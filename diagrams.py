@@ -7,13 +7,21 @@ import random
 from collections import Counter
 os.environ["QT_LOGGING_RULES"] = "qt.qpa.wayland=false"
 
-files = ["twitter-small-out.tsv"]
+files = [
+    "out-twitter-small.tsv", 
+    "out-twitter-larger.tsv" # for task 1.5
+]
 
 random.seed(42) # for reproducible results
 
 # TODO: add comments, which part of the code belongs to which question
 # ABOVE IS NECESSARY FOR THE ASSIGNMENT
 for filename in files:
+    print(
+        f"--------------------------------------------------------------------\n"
+        f"RUNNING TASKS FOR: {filename}\n"
+        f"--------------------------------------------------------------------\n"
+    )
     df = pd.read_csv(filename, sep="\t")
     # G = nx.read_edgelist(filename, delimiter="\t", create_using=nx.DiGraph)
     G = nx.from_pandas_edgelist(df, source="source", target="target", edge_attr="weight", create_using=nx.DiGraph)
@@ -26,6 +34,9 @@ for filename in files:
         f"density = {nx.density(G):.3e}"
     )
 
+    #####################################################
+    # Task 1.2 - diagrams for degree distributions      #
+    #####################################################
     in_sequence = [d for n, d in G.in_degree()]
     out_sequence = [d for n, d in G.out_degree()]
 
@@ -40,7 +51,7 @@ for filename in files:
     ax.legend()
 
     fig.tight_layout()
-    plt.savefig('degree-distribution.png', dpi=500)
+    plt.savefig(f'{filename}_degree-distribution.png', dpi=500)
 
     wcc = list(nx.weakly_connected_components(G))
     largest_wcc = max(wcc, key=len)
@@ -74,15 +85,27 @@ for filename in files:
     plt.xlabel("Distance")
     plt.ylabel("Frequency")
     plt.tight_layout()
-    plt.savefig('distance-distribution.png', dpi=200)
+    plt.savefig(f'{filename}_distance-distribution.png', dpi=200)
 
     # average distance: exclude distance 0 (a node paired with itself)
     pairs = {d: c for d, c in counts.items() if d > 0}
 
+    #####################################################
+    # Task 1.3 - link weight distribution               #
+    #####################################################
     weights, freqs = np.unique(df["weight"], return_counts=True)
 
+    fig3, ax3 = plt.subplots(figsize=(8, 6))
+    ax3.loglog(weights, freqs, "o")
+    ax3.set_title(f"Link weight distribution - {network_name}")
+    ax3.set_xlabel("Link weight (number of mentions)")
+    ax3.set_ylabel("Number of links")
+    fig3.tight_layout()
+    fig3.savefig(f"{network_name}-weights.png", dpi=200)
 
-        # ---------- Q1.4: centrality (top 20) ----------
+    #####################################################
+    # Task 1.4 - Centrality, Betweenness, Closeness     #
+    #####################################################
     def top20(scores):
         return sorted(scores.items(), key=lambda x: x[1], reverse=True)[:20]
 
@@ -106,20 +129,12 @@ for filename in files:
         print(f"\n{network_name}: top 20 by {name}")
         for rank, (user, score) in enumerate(top20(scores), 1):
             print(f"{rank:2d}. {user:20s} {score:.5f}")
-
-    fig3, ax3 = plt.subplots(figsize=(8, 6))
-    ax3.loglog(weights, freqs, "o")
-    ax3.set_title(f"Link weight distribution - {network_name}")
-    ax3.set_xlabel("Link weight (number of mentions)")
-    ax3.set_ylabel("Number of links")
-    fig3.tight_layout()
-    fig3.savefig(f"{network_name}-weights.png", dpi=200)
     
-    # print(network_name)
-    # print(f"  # weakly connected components:   {len(wcc)}")
-    # print(f"  # strongly connected components: {len(scc)}")
-    # print(f"  Largest WCC: {wcc_subgraph.number_of_nodes()} nodes, "
-    #       f"{wcc_subgraph.number_of_edges()} links")
-    # print(f"  Largest SCC: {scc_subgraph.number_of_nodes()} nodes, "
-    #       f"{scc_subgraph.number_of_edges()} links")
-    # print(f"{name}'s approx average distance in giant component ({n_samples} Samples): {sum(d * c for d, c in pairs.items()) / sum(pairs.values())}")
+    print(network_name)
+    print(f"  # weakly connected components:   {len(wcc)}")
+    print(f"  # strongly connected components: {len(scc)}")
+    print(f"  Largest WCC: {wcc_subgraph.number_of_nodes()} nodes, "
+          f"{wcc_subgraph.number_of_edges()} links")
+    print(f"  Largest SCC: {scc_subgraph.number_of_nodes()} nodes, "
+          f"{scc_subgraph.number_of_edges()} links")
+    print(f"{name}'s approx average distance in giant component ({n_samples} Samples): {sum(d * c for d, c in pairs.items()) / sum(pairs.values())}")
